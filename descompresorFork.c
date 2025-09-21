@@ -186,20 +186,20 @@ int main(int argc, char* argv[]) {
     long* offsets = (long*)malloc(totalArchivos * sizeof(long));
     char** nombres = (char**)malloc(totalArchivos * sizeof(char*));
     uint64_t* tamanos = (uint64_t*)malloc(totalArchivos * sizeof(uint64_t));
-    long posActual = ftell(archivoComprimido);
     for (int f = 0; f < totalArchivos; f++) {
         // lee la información del archivo
-        offsets[f] = posActual;
         int tamanoNombre;
         fread(&tamanoNombre, sizeof(int), 1, archivoComprimido);
-        posActual += sizeof(int);
         char* nombre = (char*)malloc(tamanoNombre + 1);
         fread(nombre, 1, tamanoNombre, archivoComprimido);
         nombre[tamanoNombre] = '\0';
-        posActual += tamanoNombre;
+
+        // Lee tamaño real del archivo descomprimido
         uint64_t tamanoArchivo;
         fread(&tamanoArchivo, sizeof(uint64_t), 1, archivoComprimido);
-        posActual += sizeof(uint64_t);
+        offsets[f] = ftell(archivoComprimido);
+
+        // Guarda nombre y tamaño
         nombres[f] = nombre;
         tamanos[f] = tamanoArchivo;
         // Encuentra donde inicia el siguiente archivo
@@ -208,7 +208,6 @@ int main(int argc, char* argv[]) {
         while (bytes < tamanoArchivo) {
             int c = fgetc(archivoComprimido);
             if (c == EOF) break;
-            posActual++;
             for (int i = 7; i >= 0; i--) {
                 int bit = (c >> i) & 1;
                 actual = bit ? actual->hijoDerecho : actual->hijoIzquierdo;
