@@ -1,18 +1,18 @@
 CC=gcc
 CFLAGS=-Wall -O2
 
-all: descompresor descompresorThreads descompresorFork descomprimir compresor compresor-hilos compresor-fork
+all: descompresor descompresorThreads descompresorFork terminal compresor compresor-hilos compresor-fork
 
 # Compilar versión serial
- descompresor: descompresor.c
+descompresor: descompresor.c
 	$(CC) $(CFLAGS) descompresor.c -o descompresor
 
 # Compilar versión con hilos
- descompresorThreads: descompresorThreads.c
+descompresorThreads: descompresorThreads.c
 	$(CC) $(CFLAGS) descompresorThreads.c -o descompresorThreads
 
 # Compilar versión con fork
- descompresorFork: descompresorFork.c
+descompresorFork: descompresorFork.c
 	$(CC) $(CFLAGS) descompresorFork.c -o descompresorFork
 
 # Compilar menú
@@ -32,4 +32,4 @@ compresor-fork: compresor-fork.c
 	$(CC) $(CFLAGS) compresor-fork.c -o compresor-fork
 
 clean:
-rm -f descompresor descompresorThreads descompresorFork descomprimir compresor compresor-hilos compresor-fork
+	rm -f descompresor descompresorThreads descompresorFork terminal compresor compresor-hilos compresor-fork

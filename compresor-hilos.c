@@ -246,14 +246,7 @@ void* tarea_hilo(void* arg) {
     // actualizar contador global
     pthread_mutex_lock(&mutex_contador);
     total_archivos_procesados++;
-    int archivos_actuales = total_archivos_procesados;
     pthread_mutex_unlock(&mutex_contador);
-
-    // mostrar completación del hilo
-    pthread_mutex_lock(datos->mutex_consola);
-    double tiempo_hilo = ((double)(datos->stats->tiempo_fin - datos->stats->tiempo_inicio) / CLOCKS_PER_SEC) * 1000.0;
-    fflush(stdout);
-    pthread_mutex_unlock(datos->mutex_consola);
 
     return NULL;
 }
