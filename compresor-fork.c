@@ -38,6 +38,7 @@ typedef struct {
 typedef struct {
     int frecuencias[NUM_CHARS];
     int archivos_procesados;
+    int mutex; // simple mutex usando variable compartida
 } MemoriaCompartida;
 
 // crear un nodo de huffman
@@ -147,34 +148,42 @@ void generar_codigos(HuffmanNode* raiz, char* codigo, int profundidad, char* cod
     generar_codigos(raiz->derecha, codigo, profundidad + 1, codigos);
 }
 
-// =================== recoleccion de frecuencias en paralelo ===================
-void recolectar_frecuencias_archivo(const char* ruta_archivo, int frecuencias_locales[]) {
+// =================== mutex simple usando busy waiting ===================
+void lock_mutex(volatile int* mutex) {
+    while (__sync_lock_test_and_set(mutex, 1)) {
+        // busy wait
+        usleep(1); // pequeña pausa para evitar uso excesivo de CPU
+    }
+}
+
+void unlock_mutex(volatile int* mutex) {
+    __sync_lock_release(mutex);
+}
+
+// =================== recoleccion de frecuencias por archivo ===================
+void procesar_archivo_individual(const char* ruta_archivo, MemoriaCompartida* memoria_compartida) {
+    int frecuencias_locales[NUM_CHARS] = {0};
+    
+    // procesar archivo
     FILE* entrada = fopen(ruta_archivo, "rb");
     if (!entrada) {
         perror("error al abrir archivo");
         return;
     }
+    
     int c;
     while ((c = fgetc(entrada)) != EOF) {
         frecuencias_locales[(unsigned char)c]++;
     }
     fclose(entrada);
-}
-
-void procesar_archivos_paralelo(ArchivoInfo archivos[], int inicio, int fin, 
-                               MemoriaCompartida* memoria_compartida) {
-    int frecuencias_locales[NUM_CHARS] = {0};
     
-    // procesar archivos asignados a este proceso
-    for (int i = inicio; i < fin; i++) {
-        recolectar_frecuencias_archivo(archivos[i].ruta, frecuencias_locales);
-    }
-    
-    // agregar frecuencias locales a la memoria compartida (sección critica simple)
+    // agregar frecuencias locales a la memoria compartida (sección crítica)
+    lock_mutex(&memoria_compartida->mutex);
     for (int i = 0; i < NUM_CHARS; i++) {
         memoria_compartida->frecuencias[i] += frecuencias_locales[i];
     }
-    memoria_compartida->archivos_procesados += (fin - inicio);
+    memoria_compartida->archivos_procesados++;
+    unlock_mutex(&memoria_compartida->mutex);
 }
 
 // =================== compresion ===================
@@ -213,7 +222,6 @@ void comprimir_archivo(const char* ruta_archivo, FILE* salida, char* codigos[NUM
 // =================== funcion principal ===================
 int main(int argc, char* argv[]) {
     if (argc != 3) {
-        printf("uso: %s <directorio_entrada> <archivo_salida>\n", argv[0]);
         return 1;
     }
 
@@ -233,6 +241,7 @@ int main(int argc, char* argv[]) {
     // inicializar memoria compartida
     memset(memoria_compartida->frecuencias, 0, sizeof(memoria_compartida->frecuencias));
     memoria_compartida->archivos_procesados = 0;
+    memoria_compartida->mutex = 0;
 
     // recopilar información de archivos
     DIR* dir = opendir(directorio_entrada);
@@ -265,30 +274,38 @@ int main(int argc, char* argv[]) {
     }
 
 
-    // procesar archivos en paralelo usando fork
-    pid_t pid = fork();
+    // crear un fork por cada archivo
+    pid_t* pids = malloc(contador_archivos * sizeof(pid_t));
     
-    if (pid < 0) {
-        perror("fork failed");
-        return 1;
-    }
-    else if (pid == 0) {
-        // proceso hijo - procesa segunda mitad de archivos
-        int inicio = contador_archivos / 2;
-        int fin = contador_archivos;
-        procesar_archivos_paralelo(archivos, inicio, fin, memoria_compartida);
-        exit(0);
-    }
-    else {
-        // proceso padre - procesa primera mitad de archivos
-        int inicio = 0;
-        int fin = contador_archivos / 2;
-        procesar_archivos_paralelo(archivos, inicio, fin, memoria_compartida);
+    for (int i = 0; i < contador_archivos; i++) {
+        pids[i] = fork();
         
-        // esperar a que termine el proceso hijo
-        int status;
-        wait(&status);
+        if (pids[i] < 0) {
+            perror("fork failed");
+            return 1;
+        }
+        else if (pids[i] == 0) {
+            // proceso hijo - procesa un archivo específico
+            procesar_archivo_individual(archivos[i].ruta, memoria_compartida);
+            exit(0);
+        }
+        // proceso padre continúa creando más forks
     }
+
+    // el proceso padre espera a que todos los procesos hijos terminen
+    for (int i = 0; i < contador_archivos; i++) {
+        int status;
+        waitpid(pids[i], &status, 0);
+        if (WEXITSTATUS(status) != 0) {
+            printf("Advertencia: el proceso hijo %d terminó con código de error %d\n", 
+                   pids[i], WEXITSTATUS(status));
+        }
+    }
+    
+    free(pids);
+
+    printf("Todos los archivos han sido procesados. Total procesados: %d\n", 
+           memoria_compartida->archivos_procesados);
 
     // construir arbol Huffman con frecuencias combinadas
     HuffmanNode* raiz = construir_arbol_huffman(memoria_compartida->frecuencias);
@@ -315,6 +332,7 @@ int main(int argc, char* argv[]) {
     fwrite(&contador_archivos, sizeof(int), 1, salida);
 
     // comprimir cada archivo
+    printf("Comprimiendo archivos:\n");
     for (int i = 0; i < contador_archivos; i++) {
         int longitud_nombre = strlen(archivos[i].nombre);
         fwrite(&longitud_nombre, sizeof(int), 1, salida);
