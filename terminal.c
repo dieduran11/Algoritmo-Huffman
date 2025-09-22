@@ -18,28 +18,50 @@ int main() {
 
         switch(opcion) {
             case 1:
-                printf("Ejecutando compresor serial...\n");
-                system("./compresor ./textos ./salida.huff");
-                break;
+                 printf("Ejecutando compresor serial:\n");
+                 system("./compresor ./textos ./salida.huff");
+                 break;
             case 2:
-                printf("Ejecutando compresor-hilos...\n");
-                system("./compresor-hilos ./textos ./salida.huff");
-                break;
+                 printf("Ejecutando compresor-hilos:\n");
+                 system("./compresor-hilos ./textos ./salida.huff");
+                 break;
             case 3:
-                printf("Ejecutando compresor-fork...\n");
-                system("./compresor-fork ./textos ./salida.huff");
-                break;
+                 printf("Ejecutando compresor-fork...\n");
+                 system("./compresor-fork ./textos ./salida.huff");
+                 break;
+
             case 4:
-                printf("Ejecutando descompresor serial...\n");
-                system("./descompresor ./salida.huff ./textos_salida");
-                break;
+                 {
+                   char nombreDirectorio[256];
+                   printf("Ingrese el nombre del directorio de salida: ");
+                   scanf("%s", nombreDirectorio);
+                   printf("Ejecutando descompresor serial: \n");
+                   char comando[512];
+                   snprintf(comando, sizeof(comando), "./descompresor ./salida.huff %s", nombreDirectorio);
+                   system(comando);
+                 }
+                 break;
             case 5:
-                printf("Ejecutando descompresor-hilos...\n");
-                system("./descompresorThreads ./salida.huff ./textos_salida");
-                break;
+                 {
+                   char nombreDirectorio[256];
+                   printf("Ingrese el nombre del directorio de salida: ");
+                   scanf("%s", nombreDirectorio);
+                   printf("Ejecutando descompresor-hilos...\n");
+                   char comando[512];
+                   snprintf(comando, sizeof(comando), "./descompresorThreads ./salida.huff %s", nombreDirectorio);
+                   system(comando);
+                 }
+                 break;
             case 6:
-                printf("Ejecutando descompresor-fork...\n");
-                system("./descompresorFork ./salida.huff ./textos_salida");
+                {
+                  char nombreDirectorio[256];
+                  printf("Ingrese el nombre del directorio de salida: ");
+                  scanf("%s", nombreDirectorio);
+                  printf("Ejecutando descompresor-fork...\n");
+                  char comando[512];
+                  snprintf(comando, sizeof(comando), "./descompresorFork ./salida.huff %s", nombreDirectorio);
+                  system(comando);
+                }
                 break;
             case 7:
                 printf("Saliendo...\n");
