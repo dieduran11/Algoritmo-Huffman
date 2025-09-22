@@ -26,7 +26,7 @@ int main() {
                  system("./compresor-hilos ./textos ./salida.huff");
                  break;
             case 3:
-                 printf("Ejecutando compresor-fork...\n");
+                 printf("Ejecutando compresor-fork:\n");
                  system("./compresor-fork ./textos ./salida.huff");
                  break;
 
@@ -46,7 +46,7 @@ int main() {
                    char nombreDirectorio[256];
                    printf("Ingrese el nombre del directorio de salida: ");
                    scanf("%s", nombreDirectorio);
-                   printf("Ejecutando descompresor-hilos...\n");
+                   printf("Ejecutando descompresor-hilos:\n");
                    char comando[512];
                    snprintf(comando, sizeof(comando), "./descompresorThreads ./salida.huff %s", nombreDirectorio);
                    system(comando);
@@ -57,14 +57,14 @@ int main() {
                   char nombreDirectorio[256];
                   printf("Ingrese el nombre del directorio de salida: ");
                   scanf("%s", nombreDirectorio);
-                  printf("Ejecutando descompresor-fork...\n");
+                  printf("Ejecutando descompresor-fork:\n");
                   char comando[512];
                   snprintf(comando, sizeof(comando), "./descompresorFork ./salida.huff %s", nombreDirectorio);
                   system(comando);
                 }
                 break;
             case 7:
-                printf("Saliendo...\n");
+                printf("Saliendo\n");
                 break;
             default:
                 printf("Opción inválida\n");
